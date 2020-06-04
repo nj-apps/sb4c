@@ -1,0 +1,148 @@
+package microClustering
+
+import (
+	"fmt"
+	"math"
+	"math/rand"
+)
+
+// kmeanClusterize regroupe les microclusters en k clusters
+func (c *Clusterer) KMeanClusterize(k int, maxIteration int) {
+	// création de k	 clusters
+	if len(c.Clusters[0]) != k {
+		c.k = k
+		c.clusteringLevels = 1
+		c.Clusters[0] = make([]cluster, k)
+		for i := range c.Clusters[0] {
+			c.Clusters[0][i].center = make([]float64, c.vectorSize)
+		}
+	}
+
+	resetAll := false
+	for id, cl := range c.Clusters[0] {
+		if cl.weight == 0 {
+			resetAll = true
+			fmt.Println("Cluster ", id, " empty : RESET ALL CLUSTERS")
+			break
+		}
+	}
+
+	// initialisation : répartition aléatoire des microclusters
+	nbInitialized := 0
+	for i := range c.mc {
+		if c.mc[i].Weight >= c.minSize { // si le µC ne contient pas des outliers
+			if c.mc[i].kmeanId == -1 || resetAll {
+				//c.mc[i].kmeanId = int(nbInitialized % k)
+				c.mc[i].kmeanId = rand.Intn(k)
+				//fmt.Println("INIT RAND mc=", i, " kmeanid=", c.mc[i].kmeanId)
+			} else {
+				//fmt.Println("KEEP mc=", i, " kmeanid=", c.mc[i].kmeanId)
+			}
+			nbInitialized++
+		} else {
+			c.mc[i].kmeanId = -1
+			//fmt.Println("INIT WEIGHT<MIN mc=", i, " kmeanid=", c.mc[i].kmeanId)
+		}
+	}
+
+	/*c.PrintMicroClusters()
+
+	for i := 0; i < c.k; i++ {
+		cumul := 0
+		for _, mc := range c.mc {
+			if mc.kmeanId == i {
+				cumul++
+			}
+		}
+		fmt.Println("cluster ", i, " : ", cumul)
+	}
+	os.Exit(0)*/
+	// dimensions
+	cont := true
+
+	nbiterations := 0
+	for cont {
+		nbiterations++
+
+		// recalcule les centres
+		for cl := 0; cl < k; cl++ { // pour chaque cluster
+			for v := 0; v < c.vectorSize; v++ { // pour chaque dimension
+				c.Clusters[0][cl].weight = 0
+				c.Clusters[0][cl].center[v] = 0
+				for i := range c.mc { // parcours les µC
+					if c.mc[i].kmeanId == cl { // si le mc appartient au cluster on l'utilise
+						c.Clusters[0][cl].center[v] += c.mc[i].Center[v] * float64(c.mc[i].Weight)
+						c.Clusters[0][cl].weight += c.mc[i].Weight
+					}
+				}
+				c.Clusters[0][cl].center[v] /= float64(c.Clusters[0][cl].weight)
+			}
+		}
+
+		// repositionne les mc par rapport aux nouveaux centres
+		nbMoved := 0
+		for i := range c.mc { // parcours les µC
+
+			nearestCluster := 0
+			shortestClusterDistance := math.MaxFloat64
+			for cl := 0; cl < k; cl++ { // pour chaque cluster
+				skip := false
+				for _, dim := range c.Clusters[0][cl].center {
+					if math.IsNaN(dim) {
+						skip = true
+						//	fmt.Println("SKIP cluster : ", cl)
+						break
+					}
+				}
+				if !skip {
+
+					if d := c.distance(c.mc[i].Center, c.Clusters[0][cl].center); d < shortestClusterDistance {
+						shortestClusterDistance = d
+						nearestCluster = cl
+					}
+				}
+			}
+
+			if nearestCluster != c.mc[i].kmeanId { // change le µC de cluster
+				nbMoved++
+				c.mc[i].kmeanId = nearestCluster
+			}
+
+		}
+
+		// faut-il continuer la clusterisation ou arrêter
+		if maxIteration > 0 {
+			maxIteration--
+		}
+		if maxIteration == 0 || nbMoved == 0 {
+			cont = false
+		}
+
+	}
+	fmt.Println("KMEAN clusterized ", len(c.mc), "µC in k=", c.k, " clusters (iterations=", nbiterations, ")")
+}
+
+// kmeanClusterize regroupe les microclusters en k clusters
+func (c *Clusterer) kmeanTest(value []float64) int {
+	nearestCluster := -1
+	shortestClusterDistance := math.MaxFloat64
+	for cl := 0; cl < c.k; cl++ { // pour chaque cluster
+		skip := false
+		if c.Clusters[0][cl].weight > 0 {
+			for _, dim := range c.Clusters[0][cl].center {
+				if math.IsNaN(dim) {
+					skip = true
+					//fmt.Println("SKIP cluster : ", cl)
+					break
+				}
+			}
+			if !skip {
+				if d := c.distance(value, c.Clusters[0][cl].center); d < shortestClusterDistance {
+					shortestClusterDistance = d
+					nearestCluster = cl
+				}
+			}
+		}
+	}
+	return nearestCluster
+}

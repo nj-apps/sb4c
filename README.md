@@ -1,5 +1,5 @@
-# odb
-odb (Online Data Buffering) is a micro-clusters based buffer for online data clustering or classification.
+# sb4c
+Streaming Buffer For Clustering is a micro-clusters based buffer for online data clustering or classification.
 
 Example of odb usages :
 * standalone classifier for static or online metrics

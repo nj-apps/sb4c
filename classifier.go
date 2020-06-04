@@ -1,7 +1,6 @@
 package microClustering
 
 import (
-	"DynamicPerf/AnalyseStatistique"
 	"fmt"
 	"math"
 	"math/rand"
@@ -114,8 +113,8 @@ func (c *Classifier) Fit(data [][]float64) {
 		}
 
 		// calcule le rayon en fonction des distances moyennes de chaque classe
-		mean, _ := AnalyseStatistique.EcartType(moyenne)
-		_, maxStdDev := AnalyseStatistique.Minmax(stdDev)
+		mean, _ := EcartType(moyenne)
+		_, maxStdDev := Minmax(stdDev)
 		c.Radius = mean + 2*maxStdDev //0.5*minStdDev
 		if c.Verbose > 0 {
 			fmt.Println("=> radius=", c.Radius, " seuil=", c.threshold)

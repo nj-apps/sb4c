@@ -1,4 +1,4 @@
-module sb4c
+module github.com/njaubertie/sb4c
 
 go 1.13
 

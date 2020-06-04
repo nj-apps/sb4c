@@ -1,4 +1,4 @@
-module github.com/njaubertie/sb4c
+module github.com/nj-apps/sb4c
 
 go 1.13
 
